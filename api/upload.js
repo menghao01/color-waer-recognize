@@ -1,9 +1,13 @@
-import express from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
+import { createServer } from 'http'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+import express from 'express'
 
-const router = express.Router()
+// 创建Express应用
+const app = express()
 
 // 配置multer用于文件上传
 const storage = multer.diskStorage({
@@ -36,7 +40,8 @@ const upload = multer({
   }
 })
 
-router.post('/', upload.single('image'), (req, res) => {
+// 文件上传路由
+app.post('/', upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: '没有上传文件' })
@@ -59,4 +64,5 @@ router.post('/', upload.single('image'), (req, res) => {
   }
 })
 
-export default router
+// Vercel Serverless Functions需要的默认导出
+export default app

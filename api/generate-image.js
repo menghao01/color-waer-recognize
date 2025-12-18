@@ -1,9 +1,13 @@
 import express from 'express'
 import axios from 'axios'
 
-const router = express.Router()
+// 创建Express应用
+const app = express()
 
-router.post('/', async (req, res) => {
+// 解析JSON请求体
+app.use(express.json())
+
+app.post('/', async (req, res) => {
   try {
     const { suggested_outfit_description, original_image_path } = req.body
     
@@ -58,4 +62,5 @@ router.post('/', async (req, res) => {
   }
 })
 
-export default router
+// Vercel Serverless Functions需要的默认导出
+export default app

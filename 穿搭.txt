@@ -1,0 +1,174 @@
+1. 项目背景与目标
+用户在日常生活中常面临“这件上衣和这条裤子颜色搭不搭”的困扰。本项目旨在开发一个Web端/H5应用，用户只需上传一张包含两件衣物的照片，系统即可通过 豆包 1.6 Flash 模型进行色彩分析、审美评判，并在搭配不当时提供优化建议，最终生成一张模特上身效果图作为直观参考。
+
+核心价值：
+
+快速决策： 3秒内判断穿搭是否合格。
+
+视觉验证： 不仅给文字建议，直接给视觉效果图。
+
+2. 用户流程图 (User Flow)
+为了确保开发逻辑清晰，以下是核心业务流程：
+
+输入： 用户上传照片（包含两件衣物）。
+
+分析（豆包 1.6 Flash）：
+
+提取主色调。
+
+应用色彩原理（互补、同色、邻近等）。
+
+判定结果：Pass (搭配) 或 Fail (不搭配)。
+
+决策分支：
+
+IF 搭配 (Pass): 建议色 = 原始识别色。
+
+IF 不搭配 (Fail): 建议色 = 模型计算出的最佳优化色。
+
+生成： 调用生图模型，根据“建议色”生成模特试穿图。
+
+输出： 评价文案 + 色板展示 + 模特建议图。
+3. 功能详细需求 (Functional Requirements)
+3.1 首页与图片上传
+功能描述： 极简首页，提供明显的“拍照/上传”入口。
+
+交互要求： 支持调用手机摄像头或本地相册。
+
+前置处理： 图片上传前进行简单的压缩（保证长边不超过2048px），以加快模型处理速度。
+
+3.2 穿搭分析核心 (后端/AI交互)
+这是产品的核心逻辑层，需要对接 豆包 1.6 Flash 0828 API。
+
+3.2.1 Prompt 设计逻辑
+系统需将用户图片转为Base64，并发送如下结构的Prompt给豆包模型：
+
+Role: 你是一位资深的时尚色彩搭配师。 Task:
+
+识别图片中两件主要衣物的主色调（例如：上衣颜色、下装颜色）。
+
+根据色彩搭配原理（互补色、同色系、三角色等）判断当前搭配是否合适。
+
+如果不合适，请给出一个建议的替换颜色（例如：保持上衣不变，建议下装换成什么颜色，或者反之）。
+
+如果合适，则建议颜色保持与原图一致。 Output Format (JSON):
+
+JSON
+
+{
+  "dominant_colors": ["色值1", "色值2"],
+  "is_harmonious": true/false,
+  "comment": "简短评价，如：撞色大胆！或 色调冲突，建议调整。",
+  "suggestion_logic": "keep_original" 或 "suggest_new",
+  "suggested_outfit_description": "生成图片的英文Prompt描述，例如：A fashion model wearing a [Color A] t-shirt and [Color B] jeans, minimalistic studio background."
+}
+3.2.2 评价输出规则
+色调提取： 显示识别到的两个色块（HEX值）。
+
+文案展示： 直接显示模型返回的 comment 字段。
+
+3.3 智能建议与逻辑判定 (关键逻辑)
+根据用户的第3点要求，系统需执行以下硬性逻辑：
+
+场景 A：模型判定“搭配” (is_harmonious: true)
+
+建议策略： 肯定用户的选择。
+
+生成目标： 使用用户原图的颜色组合生成模特图。
+
+文案示例： “完美！这组配色非常有层次感。”
+
+场景 B：模型判定“不搭配” (is_harmonious: false)
+
+建议策略： 提出修改意见。
+
+生成目标： 使用模型建议的优化颜色组合生成模特图。
+
+文案示例： “略显沉闷。建议将裤子换成米白色，会更清爽。”
+3.4 模特效果图生成 (Generative AI)
+功能描述： 将 3.2 步骤中产出的 suggested_outfit_description (建议穿搭描述) 发送给生图模型（可以是豆包的文生图能力，或Stable Diffusion/Midjourney API）。
+
+展示： 在分析结果页下方，展示一张AI生成的模特图。
+
+标注： 图片下方需标注：“AI生成效果仅供配色参考”。
+
+4. 页面UI布局建议 (Wireframe Info)
+4.1 结果页布局
+顶部： 用户上传的原图（缩略图）。
+
+中部 - 评价区：
+
+大号字体的评价（如：“撞色大胆！”）。
+
+两个色块圆点，中间用线连接（表示关系）。
+
+下部 - 建议区：
+
+标题：“试穿效果预览”。
+
+核心展示： AI生成的模特全信图片。
+
+文字说明：如果是不搭配的情况，说明“已为您把下装替换为[建议色]”。
+
+5. 技术与性能要求 (Non-functional Requirements)
+响应速度： * 文本分析（豆包 1.6 Flash）：< 2秒。
+
+图片生成：< 10秒。
+
+如果不搭配，建议先出文字评价，图片生成时显示“正在为您试穿建议搭配...”。
+
+并发： 考虑到豆包 1.6 Flash 的并发限制，需在后端做队列处理。
+
+容错： 如果图片中没有识别到衣服（例如用户拍了风景），模型需返回错误提示：“未检测到衣物，请重新拍摄”。
+
+6. 后续迭代计划 (Future Scope)
+V1.1: 增加“风格”选项（如：商务、休闲、运动），让评价更精准。
+
+V1.2: 允许用户指定保留哪件衣服（例如：“我一定要穿这件红上衣，帮我配裤子”）。
+
+V2.0: 引入“虚拟试穿” (Virtual Try-On) 技术，而不只是生成通用模特，让用户原本的衣服贴合在模特身上。
+我需要接入的豆包1.6 flash 0715大模型的信息如下：
+API Key："c7034bf1-10bc-4574-b0fe-1fd259d4dff0"
+Model ID：doubao-seed-1-6-flash-250828
+接入代码示例：
+curl https://ark.cn-beijing.volces.com/api/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARK_API_KEY" \
+  -d $'{
+    "model": "ep-20251215143748-9cslv",
+    "messages": [
+        {
+            "content": [
+                {
+                    "image_url": {
+                        "url": "https://ark-project.tos-cn-beijing.ivolces.com/images/view.jpeg"
+                    },
+                    "type": "image_url"
+                },
+                {
+                    "text": "图片主要讲了什么?",
+                    "type": "text"
+                }
+            ],
+            "role": "user"
+        }
+    ]
+}'
+
+这是图生图模型的调用信息
+API-KEY : "adb1b656-71e5-4a5b-a6a7-84550dc80fda"
+Model ID: doubao-seedream-4-0-250828
+接入代码示例：
+curl -X POST https://ark.cn-beijing.volces.com/api/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARK_API_KEY" \
+  -d '{
+    "model": "ep-20251217112801-lrnn9",
+    "prompt": "生成狗狗趴在草地上的近景画面",
+    "image": "https://ark-project.tos-cn-beijing.volces.com/doc_image/seedream4_imageToimage.png",
+    "sequential_image_generation": "disabled",
+    "response_format": "url",
+    "size": "2K",
+    "stream": false,
+    "watermark": true
+}'

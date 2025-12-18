@@ -130,13 +130,27 @@ function App() {
     }
   }
 
+  // 获取API基础地址
+  const getApiBaseUrl = () => {
+    // 在Vercel部署时，API和前端在同一域名下
+    if (typeof window !== 'undefined') {
+      // 生产环境或预览环境
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return '' // 使用相对路径
+      }
+    }
+    // 本地开发环境
+    return 'http://localhost:3001'
+  }
+
   // 上传文件到后端
   const uploadFile = async (file) => {
     const formData = new FormData()
     formData.append('image', file)
     
     try {
-      const response = await fetch('http://localhost:3001/api/upload', {
+      const apiBase = getApiBaseUrl()
+      const response = await fetch(`${apiBase}/api/upload`, {
         method: 'POST',
         body: formData
       })
@@ -159,7 +173,8 @@ function App() {
   const analyzeImage = async (filePath) => {
     try {
       console.log('调用分析API，文件路径:', filePath);
-      const response = await fetch('http://localhost:3001/api/analyze', {
+      const apiBase = getApiBaseUrl()
+      const response = await fetch(`${apiBase}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -191,7 +206,8 @@ function App() {
   // 生成模特图
   const generateModelImage = async (description, originalImagePath) => {
     try {
-      const response = await fetch('http://localhost:3001/api/generate-image', {
+      const apiBase = getApiBaseUrl()
+      const response = await fetch(`${apiBase}/api/generate-image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
